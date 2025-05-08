@@ -106,15 +106,16 @@ class LoginViewModel @Inject constructor(
                         // Store tokens for future requests
                         authInterceptor.setTokens(loginResponse.access, loginResponse.refresh)
                         
-                        // Check if user is admin by getting their profile
-                        val profileResponse = api.getUserProfile()
-                        if (profileResponse.isSuccessful) {
-                            val userProfile = profileResponse.body()
+                        // Check if user is admin by getting all users and finding the current user
+                        val usersResponse = api.getAllUsers()
+                        if (usersResponse.isSuccessful) {
+                            val users = usersResponse.body()
+                            val currentUser = users?.find { it.email == _uiState.value.email }
                             _uiState.update { 
                                 it.copy(
                                     isLoading = false, 
                                     success = true,
-                                    isAdmin = userProfile?.isAdmin ?: false
+                                    isAdmin = currentUser?.isAdmin ?: false
                                 ) 
                             }
                         } else {

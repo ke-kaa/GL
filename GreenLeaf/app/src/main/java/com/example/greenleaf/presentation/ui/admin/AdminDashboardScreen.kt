@@ -3,6 +3,9 @@ package com.example.greenleaf.presentation.ui.admin
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.greenleaf.presentation.navigation.Screen
 import com.example.greenleaf.presentation.viewmodels.AdminDashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,6 +40,22 @@ fun AdminDashboardScreen(
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
                 )
             )
+        },
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                    label = { Text("Home") },
+                    selected = true,
+                    onClick = { /* Already on home */ }
+                )
+                NavigationBarItem(
+                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
+                    label = { Text("Profile") },
+                    selected = false,
+                    onClick = { navController.navigate(Screen.Profile.route) }
+                )
+            }
         }
     ) { contentPadding ->
         if (isLoading) {
@@ -75,11 +95,13 @@ fun AdminDashboardScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.Gray
                             )
-                            Text(
-                                text = "Plants: ${user.plantCount}, Observations: ${user.observationCount}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
+                            if (!user.isAdmin) {
+                                Text(
+                                    text = "Plants: ${user.plantCount}, Observations: ${user.observationCount}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.Gray
+                                )
+                            }
                         }
                         AssistChip(
                             onClick = { /* no action */ },
