@@ -109,8 +109,9 @@ fun AddEditObservationScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .height(180.dp)
-                        .fillMaxWidth()
+                        .height(150.dp)
+                        .width(300.dp)                         // FIXED width
+                        .align(Alignment.CenterHorizontally)
                         .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
                         .clickable {

@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -87,8 +88,10 @@ fun AddEditPlantScreen(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
+
+                        .height(150.dp)
+                        .width(300.dp)                         // FIXED width
+                        .align(Alignment.CenterHorizontally)
                         .background(Color.LightGray)
                         .clickable {
                             photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -103,7 +106,7 @@ fun AddEditPlantScreen(
                         )
                     } else {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Filled.Person, contentDescription = "Add Image")
+                            Icon(Icons.Filled.CameraAlt, contentDescription = "Add Image")
                             Text("Tap to Add/Change Image")
                         }
                     }
