@@ -30,6 +30,8 @@ import com.example.greenleaf.presentation.viewmodels.HomeViewModel
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
 import androidx.compose.foundation.background
+import androidx.compose.ui.text.font.FontStyle
+import com.example.greenleaf.presentation.components.MainBottomBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,7 +51,7 @@ fun HomeScreen(
     val tabParam = backStackEntry?.arguments?.getString("tab") ?: "plants"
 
     // Set initial tab based on the tab parameter
-    var selectedTabIndex by remember { 
+    var selectedTabIndex by remember {
         mutableIntStateOf(
             when (tabParam) {
                 "observations" -> 1
@@ -62,7 +64,18 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("GreenLeaf") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                title = {
+                    Box(Modifier.fillMaxWidth()) {
+                        Text(
+                            text = "GreenLeaf",
+                            style = MaterialTheme.typography.titleLarge,
+                            modifier = Modifier.align(Alignment.CenterStart)  // ← forces left
+                        )
+                    }
+                },
                 actions = {
                     IconButton(onClick = { homeViewModel.loadData() }) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
@@ -81,29 +94,7 @@ fun HomeScreen(
                 Icon(Icons.Filled.Add, contentDescription = "Add")
             }
         },
-        bottomBar = {
-            Column {
-                HorizontalDivider(thickness = 1.dp, color = Color.Gray)
-                NavigationBar {
-                    NavigationBarItem(
-                        selected = true,
-                        onClick = { /* Home selected */ },
-                        icon = { Icon(Icons.Filled.Home, contentDescription = "Home") },
-                        label = { Text("Home") }
-                    )
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = {
-                            navController.navigate(Screen.Profile.route) {
-                                popUpTo(Screen.Home.route) { inclusive = false }
-                            }
-                        },
-                        icon = { Icon(Icons.Filled.Person, contentDescription = "Account") },
-                        label = { Text("Account") }
-                    )
-                }
-            }
-        }
+        bottomBar = { MainBottomBar(navController) },
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
             TabRow(
@@ -187,7 +178,6 @@ fun HomeScreen(
         }
     }
 }
-
 @Composable
 fun PlantCard(
     plant: Plant,
@@ -196,38 +186,47 @@ fun PlantCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        shape = RoundedCornerShape(8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),          // Figma uses slightly rounder corners
+        elevation = CardDefaults.cardElevation(4.dp) // subtle shadow
     ) {
-        Box(modifier = Modifier.height(180.dp)) {
+        Box(
+            modifier = Modifier
+                .height(180.dp)
+        ) {
             AsyncImage(
                 model = plant.plantImageUrl,
                 contentDescription = plant.commonName,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            // Dark overlay
+            Box( // darker overlay so text really pops
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+            )
+            // content container
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-            )
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .padding(20.dp)            // consistent 20dp inset
             ) {
                 Text(
                     text = plant.commonName,
                     style = MaterialTheme.typography.titleLarge,
-                    color = Color.White
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.align(Alignment.TopStart)
                 )
+
                 Button(
                     onClick = onDetailsClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.align(Alignment.BottomEnd)
                 ) {
-                    Text(text = "Plant Details", color = Color.White)
+                    Text("Plant Details", color = Color.White, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -243,47 +242,195 @@ fun ObservationCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        shape = RoundedCornerShape(8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(4.dp)
     ) {
-        Box(modifier = Modifier.height(180.dp)) {
+        Box(
+            modifier = Modifier
+                .height(200.dp)
+        ) {
             AsyncImage(
                 model = observation.observationImageUrl,
                 contentDescription = observation.relatedPlantName,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-            // Dark overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
+                    .background(Color.Black.copy(alpha = 0.6f))
             )
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(20.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
                 Column {
-                    Text(
-                        text = observation.relatedPlantName,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White
-                    )
-                    Text(
-                        text = dateText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.8f)
-                    )
+                    // First header row: name / timestamp
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = observation.relatedPlantName,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = dateText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    // Second header row: scientific name / location
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = observation.relatedPlantName, // swap in scientificName when you wire models
+                            style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+                            color = Color.White.copy(alpha = 0.9f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = observation.location,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.8f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
+
+                // Note text: two lines max
+                Text(
+                    text = observation.note ?: "",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                // View Details button bottom-right
                 Button(
                     onClick = onDetailsClick,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text(text = "View Details", color = Color.White)
+                    Text("View Details", color = Color.White, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
     }
 }
+
+//@Composable
+//fun PlantCard(
+//    plant: Plant,
+//    onDetailsClick: () -> Unit
+//) {
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(16.dp),
+//        shape = RoundedCornerShape(8.dp)
+//    ) {
+//        Box(modifier = Modifier.height(180.dp)) {
+//            AsyncImage(
+//                model = plant.plantImageUrl,
+//                contentDescription = plant.commonName,
+//                contentScale = ContentScale.Crop,
+//                modifier = Modifier.fillMaxSize()
+//            )
+//            // Dark overlay
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .background(Color.Black.copy(alpha = 0.5f))
+//            )
+//            Column(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .padding(16.dp),
+//                verticalArrangement = Arrangement.SpaceBetween
+//            ) {
+//                Text(
+//                    text = plant.commonName,
+//                    style = MaterialTheme.typography.titleLarge,
+//                    color = Color.White
+//                )
+//                Button(
+//                    onClick = onDetailsClick,
+//                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
+//                ) {
+//                    Text(text = "Plant Details", color = Color.White)
+//                }
+//            }
+//        }
+//    }
+//}
+//
+//@Composable
+//fun ObservationCard(
+//    observation: Observation,
+//    onDetailsClick: () -> Unit
+//) {
+//    val dateText = "${observation.date}, ${observation.time}"
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(16.dp),
+//        shape = RoundedCornerShape(8.dp)
+//    ) {
+//        Box(modifier = Modifier.height(180.dp)) {
+//            AsyncImage(
+//                model = observation.observationImageUrl,
+//                contentDescription = observation.relatedPlantName,
+//                contentScale = ContentScale.Crop,
+//                modifier = Modifier.fillMaxSize()
+//            )
+//            // Dark overlay
+//            Box(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .background(Color.Black.copy(alpha = 0.5f))
+//            )
+//            Column(
+//                modifier = Modifier
+//                    .fillMaxSize()
+//                    .padding(16.dp),
+//                verticalArrangement = Arrangement.SpaceBetween
+//            ) {
+//                Column {
+//                    Text(
+//                        text = observation.relatedPlantName,
+//                        style = MaterialTheme.typography.titleMedium,
+//                        color = Color.White
+//                    )
+//                    Text(
+//                        text = dateText,
+//                        style = MaterialTheme.typography.bodyMedium,
+//                        color = Color.White.copy(alpha = 0.8f)
+//                    )
+//                }
+//                Button(
+//                    onClick = onDetailsClick,
+//                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
+//                ) {
+//                    Text(text = "View Details", color = Color.White)
+//                }
+//            }
+//        }
+//    }
+//}

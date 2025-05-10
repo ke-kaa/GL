@@ -1,21 +1,29 @@
 package com.example.greenleaf.presentation.ui.profile
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Home
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.example.greenleaf.presentation.viewmodels.ProfileViewModel
+import coil3.compose.AsyncImage
+import com.example.greenleaf.presentation.components.MainBottomBar
 import com.example.greenleaf.presentation.navigation.Screen
+import com.example.greenleaf.presentation.viewmodels.ProfileViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,12 +37,10 @@ fun ProfileScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
 
-    // Refresh profile when returning from edit screen
-    LaunchedEffect(Unit) {
-        viewModel.loadUserProfile()
-    }
+    // initial load
+    LaunchedEffect(Unit) { viewModel.loadUserProfile() }
 
-    // If user is gone, go to login
+    // navigate away if logged out
     if (isLoggedOut) {
         LaunchedEffect(Unit) {
             navController.navigate(Screen.Login.route) {
@@ -45,153 +51,217 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home") },
-                    selected = false,
-                    onClick = {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.Profile.route)
-                            launchSingleTop = true
-                        }
-                    }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Account") },
-                    label = { Text("Account") },
-                    selected = true,
-                    onClick = { /* already here */ }
-                )
-            }
-        },
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Profile") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                title = {
+                    Text(
+                        "Profile",
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                },
                 actions = {
-                    IconButton(onClick = { navController.navigate(Screen.EditProfile.route) }) {
-                        Icon(Icons.Default.Edit, "Edit")
+                    IconButton(onClick = {
+                        navController.navigate(Screen.EditProfile.route)
+                    }) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
                     }
                 }
             )
-        }
+        },
+        bottomBar = { MainBottomBar(navController) }
     ) { padding ->
         Box(
-            modifier = Modifier
+            Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
             when {
                 isLoading -> {
-                    CircularProgressIndicator(
+                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                }
+                error != null -> {
+                    Text(
+                        text = error!!,
+                        color = MaterialTheme.colorScheme.error,
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
-                error != null -> {
+                user != null -> {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = error ?: "Unknown error",
-                            color = MaterialTheme.colorScheme.error,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(onClick = { viewModel.loadUserProfile() }) {
-                            Text("Retry")
-                        }
-                    }
-                }
-                user != null -> {
-                    Column(
-                        Modifier
-                            .fillMaxSize()
-                            .padding(16.dp)
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Icon(
-                            Icons.Default.Person,
-                            contentDescription = null,
-                            Modifier.size(120.dp)
-                        )
-                        Spacer(Modifier.height(16.dp))
-                        
-                        // Display name if available, otherwise show empty space
-                        if (user?.firstName != null || user?.lastName != null) {
-                            Text(
-                                "${user?.firstName.orEmpty()} ${user?.lastName.orEmpty()}".trim(),
-                                style = MaterialTheme.typography.titleLarge
+                        Spacer(Modifier.height(24.dp))
+
+                        // Avatar
+                        val img = user!!.profileImage
+                        if (!img.isNullOrBlank()) {
+                            AsyncImage(
+                                model = img,
+                                contentDescription = "Profile Photo",
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFE0E0E0)),
+                                contentScale = ContentScale.Crop
                             )
                         } else {
-                            Spacer(Modifier.height(24.dp))
-                        }
-                        
-                        Text(user?.email ?: "", style = MaterialTheme.typography.bodyMedium)
-                        
-                        // Display other profile information if available
-                        user?.birthdate?.let {
-                            Spacer(Modifier.height(8.dp))
-                            Text("Birth Date: $it", style = MaterialTheme.typography.bodyMedium)
-                        }
-                        
-                        user?.gender?.let {
-                            Spacer(Modifier.height(8.dp))
-                            Text("Gender: $it", style = MaterialTheme.typography.bodyMedium)
-                        }
-                        
-                        user?.phoneNumber?.let {
-                            Spacer(Modifier.height(8.dp))
-                            Text("Phone: $it", style = MaterialTheme.typography.bodyMedium)
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "Placeholder",
+                                modifier = Modifier
+                                    .size(120.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFE0E0E0))
+                            )
                         }
 
-                        Spacer(Modifier.weight(1f))
+                        Spacer(Modifier.height(16.dp))
 
+                        // First / Last name row
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("First Name", fontSize = 12.sp, color = Color.Gray)
+                                Text(
+                                    user!!.firstName.orEmpty(),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                            }
+                            Column(Modifier.weight(1f)) {
+                                Text("Last Name", fontSize = 12.sp, color = Color.Gray)
+                                Text(
+                                    user!!.lastName.orEmpty(),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+// Birth Date & Gender side by side
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            // Birth Date
+                            Column(Modifier.weight(1f)) {
+                                Text("Birth Date", fontSize = 12.sp, color = Color.Gray)
+                                Text(
+                                    user!!.birthdate.orEmpty(),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                            }
+                            // Gender
+                            Column(Modifier.weight(1f)) {
+                                Text("Gender", fontSize = 12.sp, color = Color.Gray)
+                                Text(
+                                    user!!.gender.orEmpty(),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                                HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Email
+                        Column(Modifier.fillMaxWidth()) {
+                            Text("Email", fontSize = 12.sp, color = Color.Gray)
+                            Text(
+                                user!!.email,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Mobile
+                        Column(Modifier.fillMaxWidth()) {
+                            Text("Mobile", fontSize = 12.sp, color = Color.Gray)
+                            Text(
+                                user!!.phoneNumber.orEmpty(),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            HorizontalDivider(thickness = 1.dp, color = Color.LightGray)
+                        }
+
+                        Spacer(Modifier.height(32.dp))
+
+                        // Log Out
                         Button(
                             onClick = { viewModel.logout() },
-                            Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853))
                         ) {
-                            Text("Log Out")
+                            Text("Log Out", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                         }
+
                         Spacer(Modifier.height(8.dp))
+
+                        // Delete Account
                         TextButton(
                             onClick = { viewModel.showDeleteDialog(true) },
-                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Delete Account")
+                            Text(
+                                "Delete Account",
+                                color = MaterialTheme.colorScheme.error,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
+
+                        Spacer(Modifier.height(24.dp))
                     }
                 }
             }
-        }
 
-        if (showDeleteDlg) {
-            AlertDialog(
-                onDismissRequest = { viewModel.showDeleteDialog(false) },
-                title = { Text("Delete Account") },
-                text = { Text("Are you sure you want to delete your account? This action cannot be undone.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        viewModel.deleteAccount()
-                        navController.navigate(Screen.Login.route) {
-                            popUpTo(Screen.Profile.route) { inclusive = true }
+            if (showDeleteDlg) {
+                AlertDialog(
+                    onDismissRequest = { viewModel.showDeleteDialog(false) },
+                    title = { Text("Delete Account") },
+                    text = { Text("Are you sure you want to delete your account? This action cannot be undone.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.deleteAccount()
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Profile.route) { inclusive = true }
+                            }
+                        }) {
+                            Text("Delete", color = MaterialTheme.colorScheme.error)
                         }
-                    }) {
-                        Text("Delete", color = MaterialTheme.colorScheme.error)
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { viewModel.showDeleteDialog(false) }) {
+                            Text("Cancel")
+                        }
                     }
-                },
-                dismissButton = {
-                    TextButton(onClick = { viewModel.showDeleteDialog(false) }) {
-                        Text("Cancel")
-                    }
-                }
-            )
+                )
+            }
         }
     }
 }
+
+

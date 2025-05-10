@@ -1,4 +1,10 @@
 package com.example.greenleaf.presentation.ui.observation
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
+import coil3.compose.AsyncImage
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -23,7 +30,7 @@ import androidx.navigation.NavController
 import com.example.greenleaf.presentation.navigation.Screen
 import com.example.greenleaf.presentation.viewmodels.AddEditObservationViewModel
 import com.example.greenleaf.presentation.viewmodels.HomeViewModel
-
+import com.example.greenleaf.presentation.components.MainBottomBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditObservationScreen(
@@ -31,6 +38,7 @@ fun AddEditObservationScreen(
     observationId: String?,
     observationViewModel: AddEditObservationViewModel = hiltViewModel(),
     homeViewModel: HomeViewModel = hiltViewModel()
+
 ) {
     val isNewObservation = observationId == null
 
@@ -59,6 +67,14 @@ fun AddEditObservationScreen(
     }
 
     val observation = observationViewModel.observation
+    val context = LocalContext.current
+    // ① Hold the picked image URI
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+
+// ② Launcher for picking one image
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri -> selectedImageUri = uri }
 
     Scaffold(
         topBar = {
@@ -75,6 +91,9 @@ fun AddEditObservationScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            MainBottomBar(navController)
         }
     ) { innerPadding ->
         Box(
@@ -94,16 +113,39 @@ fun AddEditObservationScreen(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
                         .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                        .clickable { /* TODO: Pick or capture observation photo */ },
+                        .clickable {
+                            // ③ Launch picker for a single image
+                            imagePickerLauncher.launch("image/*")
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AddAPhoto,
-                        contentDescription = "Add Observation Photo",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    when {
+                        selectedImageUri != null -> {
+                            // ④ Show newly picked image
+                            AsyncImage(
+                                model = selectedImageUri,
+                                contentDescription = "Picked Observation Photo",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        observationViewModel.observation.observationImageUrl != null -> {
+                            // ⑤ Show existing image when editing
+                            AsyncImage(
+                                model =observationViewModel .observation.observationImageUrl,
+                                contentDescription = "Existing Observation Photo",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        else -> {
+                            // ⑥ Fallback UI
+                            Icon(Icons.Default.AddAPhoto, contentDescription = "Add Observation Photo", modifier = Modifier.size(48.dp))
+                        }
+                    }
                 }
+
+
                 Spacer(modifier = Modifier.height(16.dp))
                 // Plant selection dropdown
                 var expanded by remember { mutableStateOf(false) }
@@ -144,7 +186,7 @@ fun AddEditObservationScreen(
                     onValueChange = { observationViewModel.onDateChange(it) },
                     label = { Text("Date (YYYY-MM-DD)") },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     isError = observationViewModel.error.value != null && observation.date.isBlank()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -153,7 +195,7 @@ fun AddEditObservationScreen(
                     onValueChange = { observationViewModel.onTimeChange(it) },
                     label = { Text("Time (HH:MM)") },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     isError = observationViewModel.error.value != null && observation.time.isBlank()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -195,9 +237,12 @@ fun AddEditObservationScreen(
                         Text("Cancel")
                     }
                     Button(
-                        onClick = { 
-                            observationViewModel.saveObservation { id ->
-                                // ID is already set in the observation object
+                        onClick = {
+                            observationViewModel.saveObservation(
+                                imageUri = selectedImageUri,
+                                context = context
+                            ) { id ->
+                                // Callback after save
                             }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),

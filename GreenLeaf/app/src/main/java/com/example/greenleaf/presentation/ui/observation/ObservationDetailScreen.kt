@@ -22,6 +22,7 @@ import com.example.greenleaf.presentation.viewmodels.PlantDetailViewModel
 import com.example.greenleaf.presentation.viewmodels.ObservationDetailViewModel
 import com.example.greenleaf.fakedata.Observation
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.greenleaf.presentation.components.MainBottomBar
 import kotlinx.coroutines.launch
 import com.example.greenleaf.presentation.navigation.Screen
 import com.example.greenleaf.presentation.viewmodels.HomeViewModel
@@ -35,13 +36,13 @@ fun ObservationDetailScreen(
     homeViewModel: HomeViewModel = hiltViewModel()
 ) {
     val scope = rememberCoroutineScope()
-    
+
     LaunchedEffect(observationId) {
         if (observationId.isNotBlank()) {
             observationViewModel.loadObservation(observationId)
         }
     }
-
+//   dameabera11@gmail.com  password  2222-22-22
     val observation = observationViewModel.observation
     val isLoading = observationViewModel.isLoading
     val error = observationViewModel.error
@@ -56,6 +57,9 @@ fun ObservationDetailScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            MainBottomBar(navController)
         }
     ) { innerPadding ->
         Box(
@@ -84,7 +88,7 @@ fun ObservationDetailScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
-                            onClick = { 
+                            onClick = {
                                 scope.launch {
                                     observationViewModel.loadObservation(observationId)
                                 }
@@ -141,7 +145,7 @@ fun ObservationDetailScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Button(
-                                onClick = { 
+                                onClick = {
                                     navController.navigate(Screen.AddEditObservation.createRoute(observation.id))
                                 },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
@@ -153,17 +157,11 @@ fun ObservationDetailScreen(
                                 onClick = {
                                     scope.launch {
                                         observationViewModel.deleteObservation(observation.id)
-                                        // Only proceed if there's no error
                                         if (observationViewModel.error == null) {
-                                            // Refresh only the observations list
                                             homeViewModel.refreshObservations()
-                                            // Small delay to ensure data is refreshed
                                             kotlinx.coroutines.delay(500)
-                                            // Navigate back to home screen with observations tab selected
                                             navController.navigate(Screen.Home.route + "?fromDeletion=true&tab=observations") {
-                                                // Pop up to home screen but don't include it
                                                 popUpTo(Screen.Home.route) { inclusive = false }
-                                                // Add a flag to indicate we want to show observations tab
                                                 launchSingleTop = true
                                             }
                                         }
@@ -199,3 +197,4 @@ fun ObservationDetailScreen(
         }
     }
 }
+

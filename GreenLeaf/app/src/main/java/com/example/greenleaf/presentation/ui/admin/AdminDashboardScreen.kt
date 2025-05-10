@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.greenleaf.presentation.components.MainBottomBar
 import com.example.greenleaf.presentation.navigation.Screen
 import com.example.greenleaf.presentation.viewmodels.AdminDashboardViewModel
 
@@ -41,22 +42,7 @@ fun AdminDashboardScreen(
                 )
             )
         },
-        bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                    label = { Text("Home") },
-                    selected = true,
-                    onClick = { /* Already on home */ }
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
-                    label = { Text("Profile") },
-                    selected = false,
-                    onClick = { navController.navigate(Screen.Profile.route) }
-                )
-            }
-        }
+        bottomBar = { MainBottomBar(navController) },
     ) { contentPadding ->
         if (isLoading) {
             Box(

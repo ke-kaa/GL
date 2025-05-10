@@ -1,5 +1,7 @@
 package com.example.greenleaf.presentation.viewmodels
 
+import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.greenleaf.data.remote.api.GreenLeafApi
@@ -10,6 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 
 @HiltViewModel
@@ -80,35 +85,57 @@ class EditProfileViewModel @Inject constructor(
         _user.value = _user.value?.copy(phoneNumber = phoneNumber)
     }
 
-    fun saveProfile() {
-        val currentUser = _user.value ?: return
+    fun saveProfile(context: Context, imageUri: Uri?) {
+        val current = _user.value ?: return
+
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
+
             try {
-                val request = UpdateProfileRequest(
-                    firstName = currentUser.firstName,
-                    lastName = currentUser.lastName,
-                    birthdate = currentUser.birthdate,
-                    gender = currentUser.gender,
-                    phoneNumber = currentUser.phoneNumber,
-                    profileImage = currentUser.profileImage
+                // helper to wrap text
+                fun String.toBody() =
+                    toRequestBody("text/plain".toMediaTypeOrNull())
+
+                val firstNameBody = (current.firstName ?: "").toBody()
+                val lastNameBody  = (current.lastName  ?: "").toBody()
+                val birthBody     = current.birthdate?.toBody()
+                val genderBody    = current.gender?.toBody()
+                val phoneBody     = current.phoneNumber?.toBody()
+
+                // build image part if user picked one
+                val imagePart = imageUri?.let { uri ->
+                    val stream = context.contentResolver.openInputStream(uri)!!
+                    val bytes  = stream.readBytes()
+                    val reqBody = bytes.toRequestBody("image/*".toMediaTypeOrNull())
+                    MultipartBody.Part.createFormData(
+                        name     = "profile_image",
+                        filename = "profile.jpg",
+                        body     = reqBody
+                    )
+                }
+
+                // call the multipart endpoint
+                val resp = api.updateUserProfileMultipart(
+                    firstNameBody,
+                    lastNameBody,
+                    birthBody,
+                    genderBody,
+                    phoneBody,
+                    imagePart
                 )
-                val response = api.updateUserProfile(request)
-                if (response.isSuccessful) {
+
+                if (resp.isSuccessful) {
                     _isSaved.value = true
                 } else {
-                    _error.value = when (response.code()) {
-                        401 -> "Unauthorized access"
-                        403 -> "Access forbidden"
-                        else -> "Failed to update profile: ${response.code()}"
-                    }
+                    _error.value = "Failed: ${resp.code()} ${resp.errorBody()?.string()}"
                 }
             } catch (e: Exception) {
-                _error.value = "Error updating profile: ${e.message}"
+                _error.value = "Error: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
     }
+
 }

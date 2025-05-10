@@ -1,6 +1,12 @@
 package com.example.greenleaf.presentation.ui.plant
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import coil3.compose.AsyncImage
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -12,9 +18,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.example.greenleaf.presentation.components.MainBottomBar
 import com.example.greenleaf.presentation.navigation.Screen
 import com.example.greenleaf.presentation.viewmodels.AddEditPlantViewModel
 import com.example.greenleaf.presentation.viewmodels.HomeViewModel
@@ -44,6 +52,13 @@ fun AddEditPlantScreen(
             }
         }
     }
+    val context = LocalContext.current
+    var selectedImageUri = remember { mutableStateOf<Uri?>(null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> selectedImageUri.value = uri }
+    )
 
     Scaffold(
         topBar = {
@@ -55,6 +70,8 @@ fun AddEditPlantScreen(
                     }
                 }
             )
+        },bottomBar = {
+            MainBottomBar(navController)
         }
     ) { innerPadding ->
         Box(
@@ -68,17 +85,30 @@ fun AddEditPlantScreen(
                     .padding(16.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Image placeholder
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp)
-                        .background(Color.LightGray),
+                        .height(200.dp)
+                        .background(Color.LightGray)
+                        .clickable {
+                            photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Person, contentDescription = "Add Image")
-                    Text("Add/Change Image")
+                    if (selectedImageUri.value != null) {
+                        AsyncImage(
+                            model = selectedImageUri.value,
+                            contentDescription = "Selected Plant Image",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Filled.Person, contentDescription = "Add Image")
+                            Text("Tap to Add/Change Image")
+                        }
+                    }
                 }
+
 
                 Spacer(Modifier.height(16.dp))
 
@@ -155,8 +185,8 @@ fun AddEditPlantScreen(
                         Text("Cancel")
                     }
                     Button(
-                        onClick = { 
-                            viewModel.savePlant { id ->
+                        onClick = {
+                            viewModel.savePlant(context, selectedImageUri.value) { id ->
                                 // ID is already set in the plantId state
                             }
                         },

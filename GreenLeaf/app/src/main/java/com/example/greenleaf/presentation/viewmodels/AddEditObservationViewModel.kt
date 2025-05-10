@@ -13,6 +13,11 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import java.net.UnknownHostException
 import java.net.SocketTimeoutException
+import android.content.Context
+import android.net.Uri
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 @HiltViewModel
 class AddEditObservationViewModel @Inject constructor(
@@ -66,6 +71,7 @@ class AddEditObservationViewModel @Inject constructor(
             relatedPlantName = plant.commonName
         )
     }
+
 
     fun loadObservation(id: String) {
         viewModelScope.launch {
@@ -125,65 +131,93 @@ class AddEditObservationViewModel @Inject constructor(
     fun onNotesChange(value: String) {
         observation = observation.copy(note = value)
     }
+    /**
+     * Call this before saveObservation() to convert the picked Uri into
+     * a Base64 string and store it in the observationImageUrl field.
+     */
+    /** Convert picked Uri → Base64 and store it */
+    fun onImageSelected(uri: Uri?, ctx: Context) {
+        uri?.let {
+            val bytes = ctx.contentResolver.openInputStream(it)?.readBytes()
+            val base64 = bytes?.let { arr -> android.util.Base64.encodeToString(arr, android.util.Base64.NO_WRAP) }
+            observation = observation.copy(observationImageUrl = base64)
+        }
+    }
 
-    fun saveObservation(onSuccess: (String) -> Unit) {
-        if (selectedPlant == null || observation.date.isBlank() || 
-            observation.time.isBlank() || observation.location.isBlank()) {
+
+    fun saveObservation(
+        context: Context,
+        imageUri: Uri?,
+        onSuccess: (String) -> Unit
+    ) {
+        if (selectedPlant == null ||
+            observation.date.isBlank() ||
+            observation.time.isBlank() ||
+            observation.location.isBlank()) {
             error.value = "Please fill in all required fields"
             return
         }
 
         viewModelScope.launch {
             isLoading.value = true
+            error.value = null
             try {
-                val observationRequest = ObservationRequest(
-                    relatedPlantId = selectedPlant?.id,
-                    observationImage = observation.observationImageUrl,
-                    time = observation.time,
-                    date = observation.date,
-                    location = observation.location,
-                    note = observation.note
-                )
+                // 1) wrap text fields
+                fun String.toPart() = toRequestBody("text/plain".toMediaTypeOrNull())
+                val plantIdPart  = selectedPlant!!.id.toString().toPart()
+                val datePart     = observation.date.toPart()
+                val timePart     = observation.time.toPart()
+                val locationPart = observation.location.toPart()
+                val notePart     = observation.note?.toPart()
 
-                val response = if (observation.id.isNotBlank()) {
-                    api.updateObservation(observation.id.toInt(), observationRequest)
-                } else {
-                    api.createObservation(observationRequest)
+                // 2) build image part from Uri
+                val imagePart: MultipartBody.Part? = imageUri?.let { uri ->
+                    val stream = context.contentResolver.openInputStream(uri)!!
+                    val bytes  = stream.readBytes()
+                    val reqFile = bytes.toRequestBody("image/*".toMediaTypeOrNull())
+                    MultipartBody.Part.createFormData(
+                        name = "observation_image",
+                        filename = "photo.jpg",
+                        body = reqFile
+                    )
                 }
 
+                // 3) call multipart endpoint
+                val response = if (observation.id.isNotBlank()) {
+                    api.updateObservationMultipart(
+                        observation.id.toInt(),
+                        plantIdPart, datePart, timePart, locationPart, notePart, imagePart
+                    )
+                } else {
+                    api.createObservationMultipart(
+                        plantIdPart, datePart, timePart, locationPart, notePart, imagePart
+                    )
+                }
+
+                // 4) handle response
                 if (response.isSuccessful) {
-                    response.body()?.let { obsResponse ->
-                        // Update the observation with the new data
+                    response.body()?.let { resp ->
                         observation = observation.copy(
-                            id = obsResponse.id.toString(),
-                            relatedPlantId = obsResponse.relatedPlant?.id?.toString(),
-                            relatedPlantName = obsResponse.relatedPlant?.commonName ?: selectedPlant?.commonName ?: "Unknown Plant",
-                            observationImageUrl = obsResponse.observationImage,
-                            date = obsResponse.date,
-                            time = obsResponse.time,
-                            location = obsResponse.location,
-                            note = obsResponse.note,
-                            createdByUserId = obsResponse.createdBy.toString()
+                            id = resp.id.toString(),
+                            observationImageUrl = resp.observationImage,
+                            date = resp.date,
+                            time = resp.time,
+                            location = resp.location,
+                            note = resp.note,
+                            relatedPlantName = resp.relatedPlant?.commonName ?: observation.relatedPlantName
                         )
                         isSaved.value = true
-                        onSuccess(obsResponse.id.toString())
+                        onSuccess(resp.id.toString())
                     }
                 } else {
-                    error.value = when (response.code()) {
-                        401 -> "Unauthorized access"
-                        403 -> "Access forbidden"
-                        else -> "Failed to save observation: ${response.code()}"
-                    }
+                    error.value = "Save failed: ${response.code()}"
                 }
-            } catch (e: UnknownHostException) {
-                error.value = "Network error: Please check your internet connection"
-            } catch (e: SocketTimeoutException) {
-                error.value = "Connection timeout: Please try again"
             } catch (e: Exception) {
-                error.value = "Error saving observation: ${e.message}"
+                error.value = "Error: ${e.message}"
             } finally {
                 isLoading.value = false
             }
         }
     }
+
 }

@@ -20,6 +20,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.example.greenleaf.presentation.viewmodels.PlantDetailViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.greenleaf.presentation.components.MainBottomBar
 import kotlinx.coroutines.launch
 import com.example.greenleaf.presentation.viewmodels.HomeViewModel
 import com.example.greenleaf.presentation.navigation.Screen
@@ -54,6 +55,8 @@ fun PlantDetailScreen(
                     }
                 }
             )
+        },bottomBar = {
+            MainBottomBar(navController)
         }
     ) { innerPadding ->
         Box(
