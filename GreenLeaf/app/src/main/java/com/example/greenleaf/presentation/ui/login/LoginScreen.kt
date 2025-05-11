@@ -41,14 +41,17 @@ fun LoginScreen(
     val viewModel: LoginViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
-    if (uiState.success) {
-        Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-        if (uiState.isAdmin) {
-            navController.navigate(Screen.AdminDashboard.route) {
-                popUpTo(Screen.Login.route) { inclusive = true }
+    // Handle successful login
+    LaunchedEffect(uiState.success) {
+        if (uiState.success) {
+            Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
+            if (uiState.isAdmin) {
+                navController.navigate(Screen.AdminDashboard.route) {
+                    popUpTo(Screen.Login.route) { inclusive = true }
+                }
+            } else {
+                onLoginSuccess()
             }
-        } else {
-            onLoginSuccess()
         }
     }
 
@@ -80,95 +83,83 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Email Field
+            // Email field
             OutlinedTextField(
                 value = uiState.email,
-                onValueChange = viewModel::onEmailChanged,
-                placeholder = { Text("Email", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = Color.Gray) },
-                shape = RoundedCornerShape(25.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFDFFFE0),
-                    unfocusedContainerColor = Color(0xFFDFFFE0),
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
-                ),
+                onValueChange = { viewModel.updateEmail(it) },
+                label = { Text("Email") },
+                leadingIcon = {
+                    Icon(Icons.Default.Email, contentDescription = "Email")
+                },
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Email)
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF00C853),
+                    focusedLabelColor = Color(0xFF00C853)
+                )
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Password Field
+            // Password field
             OutlinedTextField(
                 value = uiState.password,
-                onValueChange = viewModel::onPasswordChanged,
-                placeholder = { Text("Password", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray) },
+                onValueChange = { viewModel.updatePassword(it) },
+                label = { Text("Password") },
+                leadingIcon = {
+                    Icon(Icons.Default.Lock, contentDescription = "Password")
+                },
                 visualTransformation = PasswordVisualTransformation(),
-                shape = RoundedCornerShape(25.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFDFFFE0),
-                    unfocusedContainerColor = Color(0xFFDFFFE0),
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.Black
-                ),
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Password)
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Color(0xFF00C853),
+                    focusedLabelColor = Color(0xFF00C853)
+                )
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = "Forgot Password?",
-                color = Color(0xFF00C48C),
-                fontSize = 12.sp,
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .clickable { /* Handle forgot password */ }
-            )
-
-            Spacer(modifier = Modifier.height(150.dp))
-
+            // Login button
             Button(
-                onClick = { viewModel.onLoginClicked() },
-                shape = RoundedCornerShape(25.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C48C)),
+                onClick = { viewModel.login(uiState.email, uiState.password) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(50.dp)
+                    .height(48.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00C853)),
+                enabled = !uiState.isLoading
             ) {
                 if (uiState.isLoading) {
                     CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White
                     )
                 } else {
-                    Text("Login", color = Color.White)
+                    Text("Log in", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Row {
-                Text("Don't have an account?", color = Color.Gray, fontSize = 12.sp)
-                Spacer(modifier = Modifier.width(4.dp))
+            // Sign up link
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text("Don't have an account? ")
                 Text(
-                    "Sign Up",
-                    color = Color(0xFF00C48C),
-                    fontSize = 12.sp,
+                    text = "Sign up",
+                    color = Color(0xFF00C853),
                     modifier = Modifier.clickable { onSignUpClick() }
                 )
             }
 
-            uiState.error?.let {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(it, color = Color.Red, fontSize = 14.sp)
+            // Error message
+            if (uiState.error != null) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = uiState.error!!,
+                    color = Color.Red,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
         }
     }

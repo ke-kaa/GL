@@ -33,6 +33,9 @@ class ProfileViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _isAdmin = MutableStateFlow(false)
+    val isAdmin: StateFlow<Boolean> = _isAdmin.asStateFlow()
+
     init {
         loadUserProfile()
     }
@@ -42,15 +45,22 @@ class ProfileViewModel @Inject constructor(
             _isLoading.value = true
             _error.value = null
             try {
-                val response = api.getUserProfile()
-                if (response.isSuccessful) {
-                    _user.value = response.body()
-                } else {
-                    _error.value = when (response.code()) {
-                        401 -> "Unauthorized access"
-                        403 -> "Access forbidden"
-                        else -> "Failed to load profile: ${response.code()}"
+                // Get user profile
+                val profileResponse = api.getUserProfile()
+                if (profileResponse.isSuccessful) {
+                    profileResponse.body()?.let { user ->
+                        _user.value = user
+                        
+                        // Get admin status from users list
+                        val usersResponse = api.getAllUsers()
+                        if (usersResponse.isSuccessful) {
+                            val users = usersResponse.body()
+                            val currentUser = users?.find { it.email == user.email }
+                            _isAdmin.value = currentUser?.isAdmin ?: false
+                        }
                     }
+                } else {
+                    _error.value = "Failed to load profile"
                 }
             } catch (e: Exception) {
                 _error.value = "Error loading profile: ${e.message}"
@@ -60,25 +70,18 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
+    fun showDeleteDialog(show: Boolean) {
+        _showDeleteDlg.value = show
+    }
+
     fun logout() {
         viewModelScope.launch {
             try {
-                val refreshToken = authInterceptor.getRefreshToken()
-                if (refreshToken == null) {
-                    _error.value = "No refresh token found"
-                    return@launch
-                }
-                val response = api.logout(LogoutRequest(refresh = refreshToken))
+                val response = api.logout(LogoutRequest(authInterceptor.getRefreshToken() ?: ""))
                 if (response.isSuccessful) {
-                    authInterceptor.setTokens(null, null) // Clear tokens
                     _isLoggedOut.value = true
                 } else {
-                    _error.value = when (response.code()) {
-                        400 -> "Invalid refresh token"
-                        401 -> "Unauthorized access"
-                        403 -> "Access forbidden"
-                        else -> "Failed to logout: ${response.code()}"
-                    }
+                    _error.value = "Failed to logout"
                 }
             } catch (e: Exception) {
                 _error.value = "Error during logout: ${e.message}"
@@ -91,18 +94,13 @@ class ProfileViewModel @Inject constructor(
             try {
                 val response = api.deleteAccount()
                 if (response.isSuccessful) {
-                    authInterceptor.setTokens(null, null) // Clear tokens
                     _isLoggedOut.value = true
                 } else {
-                    _error.value = "Failed to delete account: ${response.code()}"
+                    _error.value = "Failed to delete account"
                 }
             } catch (e: Exception) {
                 _error.value = "Error deleting account: ${e.message}"
             }
         }
-    }
-
-    fun showDeleteDialog(show: Boolean) {
-        _showDeleteDlg.value = show
     }
 }

@@ -24,6 +24,7 @@ import coil3.compose.AsyncImage
 import com.example.greenleaf.presentation.components.MainBottomBar
 import com.example.greenleaf.presentation.navigation.Screen
 import com.example.greenleaf.presentation.viewmodels.ProfileViewModel
+import com.example.greenleaf.presentation.components.AdminBottomBar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,6 +37,7 @@ fun ProfileScreen(
     val user by viewModel.user.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val isAdmin by viewModel.isAdmin.collectAsState()
 
     // initial load
     LaunchedEffect(Unit) { viewModel.loadUserProfile() }
@@ -55,7 +57,7 @@ fun ProfileScreen(
             CenterAlignedTopAppBar(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
+                    .height(90.dp),
                 title = {
                     Text(
                         "Profile",
@@ -64,15 +66,28 @@ fun ProfileScreen(
                     )
                 },
                 actions = {
-                    IconButton(onClick = {
-                        navController.navigate(Screen.EditProfile.route)
-                    }) {
-                        Icon(Icons.Default.Edit, contentDescription = "Edit Profile")
+                    IconButton(
+                        onClick = {
+                            navController.navigate(Screen.EditProfile.route)
+                        },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Edit Profile",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             )
         },
-        bottomBar = { MainBottomBar(navController) }
+        bottomBar = { 
+            if (isAdmin) {
+                AdminBottomBar(navController)
+            } else {
+                MainBottomBar(navController)
+            }
+        }
     ) { padding ->
         Box(
             Modifier

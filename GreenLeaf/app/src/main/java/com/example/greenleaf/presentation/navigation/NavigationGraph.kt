@@ -53,8 +53,17 @@ fun NavigationGraph(navController: NavHostController) {
                     defaultValue = "plants"
                 }
             )
-        ) {
-            HomeScreen(navController = navController)
+        ) { backStackEntry ->
+            // Check if user is admin
+            val isAdmin = backStackEntry.savedStateHandle.get<Boolean>("isAdmin") ?: false
+            if (isAdmin) {
+                // Redirect admin users to admin dashboard
+                navController.navigate(Screen.AdminDashboard.route) {
+                    popUpTo(Screen.Home.route) { inclusive = true }
+                }
+            } else {
+                HomeScreen(navController = navController)
+            }
         }
 
         composable(Screen.Profile.route) {

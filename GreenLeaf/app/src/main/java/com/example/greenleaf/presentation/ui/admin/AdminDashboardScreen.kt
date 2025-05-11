@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.greenleaf.presentation.components.MainBottomBar
+import com.example.greenleaf.presentation.components.AdminBottomBar
 import com.example.greenleaf.presentation.navigation.Screen
 import com.example.greenleaf.presentation.viewmodels.AdminDashboardViewModel
 
@@ -42,7 +42,7 @@ fun AdminDashboardScreen(
                 )
             )
         },
-        bottomBar = { MainBottomBar(navController) },
+        bottomBar = { AdminBottomBar(navController) },
     ) { contentPadding ->
         if (isLoading) {
             Box(

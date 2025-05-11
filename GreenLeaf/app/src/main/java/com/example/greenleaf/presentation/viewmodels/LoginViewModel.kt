@@ -16,6 +16,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import androidx.navigation.NavController
 
 //
 //@HiltViewModel
@@ -83,24 +84,19 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
-    fun onEmailChanged(email: String) {
+    fun updateEmail(email: String) {
         _uiState.update { it.copy(email = email) }
     }
 
-    fun onPasswordChanged(password: String) {
+    fun updatePassword(password: String) {
         _uiState.update { it.copy(password = password) }
     }
 
-    fun onLoginClicked() {
+    fun login(email: String, password: String) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                _uiState.update { it.copy(isLoading = true, error = null) }
-
-                val response = api.login(LoginRequest(
-                    email = _uiState.value.email,
-                    password = _uiState.value.password
-                ))
-
+                val response = api.login(LoginRequest(email, password))
                 if (response.isSuccessful) {
                     response.body()?.let { loginResponse ->
                         // Store tokens for future requests
@@ -110,7 +106,7 @@ class LoginViewModel @Inject constructor(
                         val usersResponse = api.getAllUsers()
                         if (usersResponse.isSuccessful) {
                             val users = usersResponse.body()
-                            val currentUser = users?.find { it.email == _uiState.value.email }
+                            val currentUser = users?.find { it.email == email }
                             _uiState.update { 
                                 it.copy(
                                     isLoading = false, 
