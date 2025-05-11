@@ -1,5 +1,6 @@
 package com.example.greenleaf.data.remote.models
 
+import com.example.greenleaf.data.local.entities.UserEntity
 import com.google.gson.annotations.SerializedName
 
 // Correct
@@ -65,4 +66,15 @@ data class UserLogoutReponse (
 
 data class LogoutRequest(
     val refresh: String
+)
+
+fun UserProfileResponse.toEntity(): UserEntity = UserEntity(
+    id = this.id,
+    firstName = this.firstName,
+    lastName = this.lastName,
+    birthdate = this.birthdate,
+    gender = this.gender,
+    email = this.email,
+    phoneNumber = this.phoneNumber,
+    profileImage = this.profileImage
 )

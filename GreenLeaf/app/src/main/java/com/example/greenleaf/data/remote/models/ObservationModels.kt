@@ -1,5 +1,6 @@
 package com.example.greenleaf.data.remote.models
 
+import com.example.greenleaf.data.local.entities.ObservationEntity
 import com.google.gson.annotations.SerializedName
 
 data class ObservationRequest(
@@ -33,4 +34,16 @@ data class ObservationResponse(
 
     @SerializedName("created_by")
     val createdBy: Int
+)
+
+
+fun ObservationResponse.toEntity(): ObservationEntity = ObservationEntity(
+    id = this.id,
+    relatedPlantId = this.relatedPlant?.id,
+    observationImage = this.observationImage,
+    time = this.time,
+    date = this.date,
+    location = this.location,
+    note = this.note,
+    isSynced = true // fetched from backend, so synced
 )

@@ -84,36 +84,40 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Email field
-            OutlinedTextField(
+            GreenInputField(
                 value = uiState.email,
                 onValueChange = { viewModel.updateEmail(it) },
-                label = { Text("Email") },
-                leadingIcon = {
-                    Icon(Icons.Default.Email, contentDescription = "Email")
-                },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF00C853),
-                    focusedLabelColor = Color(0xFF00C853)
-                )
+                label = "Email",
+                icon = Icons.Default.Email
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Password field
-            OutlinedTextField(
+//            OutlinedTextField(
+//                value = uiState.password,
+//                onValueChange = viewModel::onPasswordChanged,
+//                placeholder = { Text("Password", color = Color.Gray) },
+//                leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color.Gray) },
+//                visualTransformation = PasswordVisualTransformation(),
+//                shape = RoundedCornerShape(25.dp),
+//                colors = TextFieldDefaults.colors(
+//                    focusedContainerColor = Color(0xFFDFFFE0),
+//                    unfocusedContainerColor = Color(0xFFDFFFE0),
+//                    focusedIndicatorColor = Color.Transparent,
+//                    unfocusedIndicatorColor = Color.Transparent,
+//                    focusedTextColor = Color.Black,
+//                    unfocusedTextColor = Color.Black
+//                ),
+//                modifier = Modifier.fillMaxWidth(),
+//                keyboardOptions = KeyboardOptions.Default.copy(keyboardType = KeyboardType.Password)
+//            )
+
+            GreenInputField(
                 value = uiState.password,
                 onValueChange = { viewModel.updatePassword(it) },
-                label = { Text("Password") },
-                leadingIcon = {
-                    Icon(Icons.Default.Lock, contentDescription = "Password")
-                },
-                visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF00C853),
-                    focusedLabelColor = Color(0xFF00C853)
-                )
+                label = "Password",
+                icon = Icons.Default.Lock
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -162,5 +166,37 @@ fun LoginScreen(
                 )
             }
         }
+    }
+}
+
+
+
+@Composable
+fun GreenInputField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector
+) {
+    key(label) { // Add key outside the OutlinedTextField
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = { Text(label, color = Color.DarkGray) },
+            leadingIcon = {
+                Icon(icon, contentDescription = null, tint = Color.DarkGray)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFDFFFE1), shape = RoundedCornerShape(16.dp)), // light green
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Color.Transparent,
+                unfocusedBorderColor = Color.Transparent,
+                disabledBorderColor = Color.Transparent,
+                errorBorderColor = Color.Transparent
+            ),
+            shape = RoundedCornerShape(16.dp),
+            singleLine = true
+        )
     }
 }

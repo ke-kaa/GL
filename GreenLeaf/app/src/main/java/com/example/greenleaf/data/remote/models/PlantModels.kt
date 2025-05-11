@@ -1,4 +1,5 @@
 package com.example.greenleaf.data.remote.models
+import com.example.greenleaf.data.local.entities.PlantEntity
 import com.google.gson.annotations.SerializedName
 
 data class PlantRequest(
@@ -31,3 +32,15 @@ data class PlantResponse(
     @SerializedName("created_by")
     val createdBy: Int
 )
+
+fun PlantResponse.toEntity(): PlantEntity = PlantEntity(
+    id = this.id,
+    plantImage = this.plantImage,
+    commonName = this.commonName,
+    scientificName = this.scientificName,
+    habitat = this.habitat,
+    origin = this.origin,
+    description = this.description,
+    isSynced = true // fetched from backend, so synced
+)
+
